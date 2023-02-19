@@ -9,6 +9,7 @@
 #define REG_RCC_AHBENR (volatile uint32_t*)(uintptr_t)0x40021014U // AHB1 Peripheral Clock Enable Register
 #define REG_RCC_CFGR2  (volatile uint32_t*)(uintptr_t)0x4002102CU // Clock configuration register 2
 
+
 //----------------
 // GPIO Registers
 //----------------
@@ -38,7 +39,7 @@ void board_clocking_init()
 
     // (4) Set PLLMUL to 12:
     // SYSCLK frequency = 48 MHz
-    *REG_RCC_CFGR |= (12U-1U) << 18U;
+    *REG_RCC_CFGR |= (12U-2U) << 18U;
 
     // (5) Enable PLL:
     *REG_RCC_CR |= 0x01000000U;
@@ -62,9 +63,11 @@ void board_gpio_init()
 
     // (2) Configure PC8 mode:
     *GPIOC_MODER |= 0b01U << (2*8U);
+    *GPIOC_MODER |= 0b01U << (2*9U);
 
     // (3) Configure PC8 type:
     *GPIOC_TYPER |= 0b0U << 8U;
+    *GPIOC_TYPER |= 0b0U << 9U;
 }
 
 void totally_accurate_quantum_femtosecond_precise_super_delay_3000_1000ms()
@@ -86,11 +89,19 @@ int main()
 
     while (1)
     {
-        *(volatile uint32_t*)(uintptr_t)0x48000814U |=  0x100U;
+        *(volatile uint32_t*)(uintptr_t)0x48000814U |=  0b1U << 8U;
 
         totally_accurate_quantum_femtosecond_precise_super_delay_3000_1000ms();
 
-        *(volatile uint32_t*)(uintptr_t)0x48000814U &= ~0x100U;
+        *(volatile uint32_t*)(uintptr_t)0x48000814U &= ~(0b1U << 8U);
+
+        totally_accurate_quantum_femtosecond_precise_super_delay_3000_1000ms();
+
+        *(volatile uint32_t*)(uintptr_t)0x48000814U |=  0b1U << 9U;
+
+        totally_accurate_quantum_femtosecond_precise_super_delay_3000_1000ms();
+
+        *(volatile uint32_t*)(uintptr_t)0x48000814U &= ~(0b1U << 9U);
 
         totally_accurate_quantum_femtosecond_precise_super_delay_3000_1000ms();
     }
