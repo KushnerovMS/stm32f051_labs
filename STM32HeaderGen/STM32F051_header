@@ -1,0 +1,48 @@
+STM32F051
+
+RCC_CR      0x40021000      Clock Control Register
+    HSION   0  1 HSI clock enable
+    HSIRDY  1  1 HSI clock ready flag
+    HSITRIM 3  5 HSI clock trimming
+    HSICAL  8  8 HSI clock calibration
+    HSEON   16 1 HSE clock enable
+    HSERDY  17 1 HSE clock ready flag
+    HSEBYP  18 1 HSE crystal oscillator bypass
+    CSSON   19 1 Clock security system enable
+    PLLON   24 1 PLL enable
+    PLLRDY  25 1 PLL clock ready flag
+
+RCC_CFGR    0x40021004      PLL Configuration Register
+    SW      0  2 System clock switch
+    SWS     2  2 System clock switch status
+    HPRE    4  4 HCLK prescaler
+    PPRE    8  2 PCLK prescaler
+    ADCPRE  14 1 ADC prescaler
+    PLLSRC  15 2 PLL input clock source
+    PLLXTPRE 17 1 HSE divider for PLL input clock
+    PLLMUL  18 4 PLL multiplication factor
+    MCO     24 4 Microcontroller clock output
+
+RCC_AHBENR  0x40021014      AHB1 Peripheral Clock Enable Register
+    DMAEN   0  1 clock enable
+    DMA2EN  1  1 DMA2 clock enable
+    SRAMEN  2  1 SRAM interface clock enable
+    FLITFEN 4  1 FLITF clock enable
+    CRCEN   6  1 CRC clock enable
+    IOPAEN  17 1 I/O port A clock enable
+    IOPBEN  18 1 I/O port B clock enable
+    IOPCEN  19 1 I/O port C clock enable
+    IOPDEN  20 1 I/O port D clock enable
+    IOPEEN  21 1 I/O port E clock enable
+    IOPFEN  22 1 I/O port F clock enable
+    TSCEN   24 1 Touch sensing controller clock enable
+
+RCC_CFGR2   0x4002102C      Clock configuration register 2
+    PREDIV  1  4 PREDIV division factor
+
+
+GPIOC_MODER 0x48000800 2    GPIO port mode register
+
+GPIOC_OTYPER 0x48000804     GPIO port output type register
+
+GPIOC_ODR   0x48000814      GPIO port output data register

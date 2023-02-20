@@ -27,7 +27,6 @@ struct Reg
 
 int main (int carg, char ** varg)
 {
-    
     if (carg <= 1)
     {
         std::cout << "Enter in file to generate\n";
@@ -56,7 +55,7 @@ int main (int carg, char ** varg)
         std::strstream sline;
         sline << line;
 
-        std::cout << line << std::endl;
+        //std::cout << line << std::endl;
 
 
         Reg new_reg;
@@ -77,7 +76,7 @@ int main (int carg, char ** varg)
             if (in_file_stream.eof())
                 break;
             std::getline(in_file_stream, line);
-            std::cout << line << std::endl;
+            //std::cout << line << std::endl;
             if (line.length() < 2)
                 continue;
             else if (line[0] != ' ' && line[0] != '\t')
@@ -92,26 +91,28 @@ int main (int carg, char ** varg)
 
             new_reg.bitsc ++;
         }
-        std::cout << i << ' ' << new_reg.bitsc << std::endl;
+        //std::cout << i << ' ' << new_reg.bitsc << std::endl;
 
 
         reg_list.push_back(new_reg);
     }
 
-    std::cout << std::endl;
+    //std::cout << std::endl;
 
     in_file_stream.close();
     
 
+    /*
     for (auto& item : reg_list)
     {
-        std::cout << item.name << " : " << item.pointer << " : " << item.offset_mul << " : " << item.comment << std::endl;
+        //std::cout << item.name << " : " << item.pointer << " : " << item.offset_mul << " : " << item.comment << std::endl;
         for (int i = 0; i < item.bitsc; i++)
             std::cout << item.bits[i].name << " : "
                       << item.bits[i].offset << " : " 
                       << item.bits[i].length << " : "
                       << item.bits[i].comment << std::endl;
     }
+    */
 
     std::ofstream out_file_stream;
     out_file_stream.open(controller_name + ".h");
@@ -139,7 +140,7 @@ int main (int carg, char ** varg)
                        "#define CLEAR_BIT(REG, BIT) *(REG) &= ~(1U << (BIT))\n"
                        "#define READ_BIT(REG, BIT)  ((*(REG) >> (BIT)) & 1U)\n"
                        "\n"
-                       "#define SET_BITS(REG, SBIT, VAL)    *(REG) != (VAL) << (BITS)\n"
+                       "#define SET_BITS(REG, SBIT, VAL)    *(REG) |= (VAL) << (SBIT)\n"
                        "#define RESET_BITS(REG, SBIT, MASK, VAL) *(REG) = ((*(REG) & ~((MASK) << (SBIT))) | ((VAL) << (SBIT)))\n"
                        "#define READ_BITS(REG, SBIT, MASK)  ((*(REG) >> (SBIT)) & (MASK))\n";
 
@@ -155,14 +156,14 @@ int main (int carg, char ** varg)
         }
         else
         {
-            std::string mask = "0d";
+            std::string mask = "0b";
             for (int k = 0; k < item.offset_mul; k ++)
                 mask.push_back('1');
             mask.push_back('U');
 
-            out_file_stream << "#define SET_"<<item.name<<"_BIT(BIT, VAL) SET_BITS(REG_"<< item.name<<", "<<item.offset_mul<<"U*BIT, VAL)\n";
-            out_file_stream << "#define RESET_"<<item.name<<"_BIT(BIT, VAL) RESET_BITS(REG_"<< item.name<<", "<<item.offset_mul<<"U*BIT, "<<mask<<", VAL)\n";
-            out_file_stream << "#define READ_"<<item.name<<"_BITS(BIT) READ_BIT(REG_"<< item.name<<", "<<item.offset_mul<<"U*BIT, "<<mask<<")\n";
+            out_file_stream << "#define SET_"<<item.name<<"_BITS(BIT, VAL) SET_BITS(REG_"<< item.name<<", "<<item.offset_mul<<"U*BIT, VAL)\n";
+            out_file_stream << "#define RESET_"<<item.name<<"_BITS(BIT, VAL) RESET_BITS(REG_"<< item.name<<", "<<item.offset_mul<<"U*BIT, "<<mask<<", VAL)\n";
+            out_file_stream << "#define READ_"<<item.name<<"_BITS(BIT) READ_BITS(REG_"<< item.name<<", "<<item.offset_mul<<"U*BIT, "<<mask<<")\n";
         }
 
         out_file_stream << std::endl;
@@ -170,7 +171,7 @@ int main (int carg, char ** varg)
         for (int i = 0; i < item.bitsc; i ++)
         {
             Bit bit = item.bits[i];
-            std::cout << bit.length << std::endl;
+            //std::cout << bit.length << std::endl;
             if (bit.length == 1)
             {
                 out_file_stream << "#define SET_"<<item.name<<'_'<<bit.name<<"() SET_BIT(REG_"<<item.name<<", "<<item.name<<'_'<<bit.name<<")\n";
@@ -179,14 +180,14 @@ int main (int carg, char ** varg)
             }
             else
             {
-                std::string mask = "0d";
+                std::string mask = "0b";
                 for (int k = 0; k < bit.length; k ++)
                     mask.push_back('1');
                 mask.push_back('U');
 
-                out_file_stream << "#define SET_"<<item.name<<'_'<<bit.name<<"_(VAL) SET_BITS(REG_"<< item.name<<", "<<item.name<<'_'<<bit.name<<", VAL)\n";
-                out_file_stream << "#define RESET_"<<item.name<<'_'<<bit.name<<"_(VAL) SET_BITS(REG_"<< item.name<<", "<<item.name<<'_'<<bit.name<<", "<<mask<<", VAL)\n";
-                out_file_stream << "#define READ_"<<item.name<<'_'<<bit.name<<"_() SET_BITS(REG_"<< item.name<<", "<<item.name<<'_'<<bit.name<<", "<<mask<<")\n";
+                out_file_stream << "#define SET_"<<item.name<<'_'<<bit.name<<"(VAL) SET_BITS(REG_"<< item.name<<", "<<item.name<<'_'<<bit.name<<", VAL)\n";
+                out_file_stream << "#define RESET_"<<item.name<<'_'<<bit.name<<"(VAL) RESET_BITS(REG_"<< item.name<<", "<<item.name<<'_'<<bit.name<<", "<<mask<<", VAL)\n";
+                out_file_stream << "#define READ_"<<item.name<<'_'<<bit.name<<"() READ_BITS(REG_"<< item.name<<", "<<item.name<<'_'<<bit.name<<", "<<mask<<")\n";
             }
 
             out_file_stream << std::endl;
@@ -197,5 +198,7 @@ int main (int carg, char ** varg)
 
 
     out_file_stream.close();
+
+    return 0;
 
 }

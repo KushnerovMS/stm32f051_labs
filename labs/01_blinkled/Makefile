@@ -26,15 +26,23 @@ endif
 # Files
 #-------
 
+
 SOURCES = \
 	entry.S \
 	blinkled.c
+
 
 OBJECTS_HALFWAY_DONE = $(SOURCES:%.c=build/%.o)
 OBJECTS              = $(OBJECTS_HALFWAY_DONE:%.S=build/%.o)
 
 EXECUTABLE_FLASH = build/blinkled.elf
 BINARY_FLASH     = build/blinkled.bin
+
+
+GEN_HEADER 	= STM32F051.h
+HEADER_GEN_BIN = ../../STM32HeaderGen/build/STM32HeaderGen
+GEN_HEADER_SOURCE = ../../STM32HeaderGen/STM32F051_header
+
 
 #---------------
 # Build scripts
@@ -48,7 +56,7 @@ $(EXECUTABLE_FLASH): $(OBJECTS)
 $(BINARY_FLASH): $(EXECUTABLE_FLASH)
 	arm-none-eabi-objcopy -O binary $< $@
 
-build/%.o: %.c
+build/%.o: %.c $(GEN_HEADER)
 	@mkdir -p build
 	$(CC) $(CFLAGS) -o $@ -c $<
 
@@ -58,6 +66,13 @@ build/%.o: %.S
 
 clean:
 	rm -rf build
+
+$(GEN_HEADER): $(GEN_HEADER_SOURCE) $(HEADER_GEN_BIN)
+	$(HEADER_GEN_BIN) $(GEN_HEADER_SOURCE)
+
+$(HEADER_GEN_BIN):
+	cd ../../STM32HeaderGen; make
+
 
 #----------------------
 # Hardware interaction
