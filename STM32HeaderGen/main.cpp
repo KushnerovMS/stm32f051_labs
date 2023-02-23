@@ -151,6 +151,7 @@ int main (int carg, char ** varg)
         if (item.offset_mul == 1)
         {
             out_file_stream << "#define SET_"<<item.name<<"_BIT(BIT) SET_BIT(REG_"<< item.name<<", BIT)\n";
+            out_file_stream << "#define SET_"<<item.name<<"_BITS(SBIT, VAL) SET_BITS(REG_"<< item.name<<", SBIT, VAL)\n";
             out_file_stream << "#define CLEAR_"<<item.name<<"_BIT(BIT) CLEAR_BIT(REG_"<< item.name<<", BIT)\n";
             out_file_stream << "#define READ_"<<item.name<<"_BIT(BIT) READ_BIT(REG_"<< item.name<<", BIT)\n";
         }

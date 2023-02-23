@@ -40,9 +40,18 @@ RCC_AHBENR  0x40021014      AHB1 Peripheral Clock Enable Register
 RCC_CFGR2   0x4002102C      Clock configuration register 2
     PREDIV  1  4 PREDIV division factor
 
+GPIOA_MODER 0x48000000 2    GPIO port mode register
+GPIOA_OTYPER 0x48000004     GPIO port output type register
+GPIOA_PUPDR 0x4800000C 2    GPIO port pull-up/pull-down register
+GPIOA_IDR   0x48000010      GPIO port input  data register
+GPIOA_ODR   0x48000014      GPIO port output data register
+
+GPIOB_MODER 0x48000400 2    GPIO port mode register
+GPIOB_OTYPER 0x48004004     GPIO port output type register
+GPIOB_PUPDR 0x4800040C 2    GPIO port pull-up/pull-down register
+GPIOB_IDR   0x48000410      GPIO port input  data register
+GPIOB_ODR   0x48000414      GPIO port output data register
 
 GPIOC_MODER 0x48000800 2    GPIO port mode register
-
 GPIOC_OTYPER 0x48000804     GPIO port output type register
-
 GPIOC_ODR   0x48000814      GPIO port output data register
