@@ -30,14 +30,6 @@
 #define CPU_FREQENCY 48000000U // CPU frequency: 48 MHz
 #define ONE_MILLISECOND CPU_FREQENCY/1000U
 
-#define BUTTON_PIN 0U
-
-//-------------
-// Leds define 
-//-------------
-
-#define LED1_PIN 0U // pin
-#define LED2_PIN 1U // pin
 
 //-------------------
 // 7-segment display
@@ -103,30 +95,14 @@ static const uint32_t POSITIONS[4] =
     POS3    // 3
 };
 
-// Display state:
-struct Seg7Display
+void display_init()
 {
-    uint32_t display;
-    uint16_t number;
-};
-
-void SEG7_set_number_quarter(struct Seg7Display* seg7, unsigned tick)
-{
-    uint32_t divisors[4] = {1, 10, 100, 1000};
-
-    unsigned quarter = tick % 4;
-    unsigned divisor = divisors[quarter];
-
-    seg7->display = (SEGMENT_PINS & ~DIGITS[(seg7->number / divisor) % 10]) | POSITIONS[quarter];
-}
-
-// Write changes to microcontroller:
-void SEG7_push_display_state_to_mc(struct Seg7Display* seg7)
-{
-    uint32_t surrounding_state = ~PINS_USED & *REG_GPIOA_ODR;
-    uint32_t to_write = PINS_USED & seg7->display;
-
-    *REG_GPIOA_ODR = surrounding_state | to_write;
+    SET_RCC_AHBENR_IOPAEN();
+    for (unsigned int i = DISPLAY_PIN_MIN; i <= DISPLAY_PIN_MAX; i ++)
+    {
+        SET_GPIOA_MODER_BITS(i, GPO_MODE);
+        SET_GPIOA_OTYPER_BITS(i, OTYPE_PUSH_PULL);
+    }
 }
 
 void display_show_number(unsigned number, unsigned tick)
@@ -135,10 +111,9 @@ void display_show_number(unsigned number, unsigned tick)
 
     unsigned position = tick % 4U;
 
-    uint32_t surrounding_state = ~PINS_USED & *REG_GPIOA_ODR;
     uint32_t segment_pins_config = SEGMENT_PINS & ~DIGITS[(number / divisors[position]) % 10U];
 
-    *REG_GPIOA_ODR = surrounding_state | segment_pins_config | POSITIONS[position];
+    RESET_BITS(REG_GPIOA_ODR, 0, PINS_USED, segment_pins_config | POSITIONS[position]);
 }
 
 //----------------------
@@ -155,8 +130,10 @@ struct Button
 
 void button_init(struct Button* button)
 {
+    SET_RCC_AHBENR_IOPBEN();
     SET_GPIOB_MODER_BITS(button -> pin, INPUT_MODE);
     SET_GPIOB_PUPDR_BITS(button -> pin, PULL_DOWN);
+
     button -> saturation = 0;
     button -> is_pressed = 0;
     button -> state_changed = 0;
@@ -164,6 +141,7 @@ void button_init(struct Button* button)
 
 void button_update(struct Button* button)
 {
+    button -> state_changed = 0;
     if (READ_GPIOB_IDR_BIT(button -> pin))   // button is pressed
     {
         if (button -> saturation < 10)
@@ -186,6 +164,28 @@ void button_update(struct Button* button)
             button -> is_pressed = 0;
         }
     }
+}
+
+//-----------
+// Leds (PC)
+//----------
+
+#define LED1_PIN 0U // pin
+#define LED2_PIN 1U // pin
+
+void led_init(unsigned led_pin)
+{
+    SET_RCC_AHBENR_IOPCEN();
+    SET_GPIOC_MODER_BITS(led_pin, GPO_MODE);
+    SET_GPIOC_OTYPER_BITS(led_pin, OTYPE_PUSH_PULL);
+}
+
+void led_blink(unsigned led, unsigned tick)
+{
+    if (tick % 100U < 50U)
+        SET_GPIOC_ODR_BIT(led);
+    else
+        CLEAR_GPIOC_ODR_BIT(led);
 }
 
 //-------------------
@@ -245,33 +245,6 @@ void totally_accurate_quantum_femtosecond_precise_super_delay_3000_1000ms()
     }
 }
 
-//--------------------
-// GPIO configuration
-//--------------------
-
-void board_gpio_init()
-{
-    // (1) Configure PA1-PA12 as output:
-    SET_RCC_AHBENR_IOPAEN();
-    SET_RCC_AHBENR_IOPCEN();
-
-    // Configure mode register:
-    for (unsigned int i = DISPLAY_PIN_MIN; i <= DISPLAY_PIN_MAX; i ++)
-        SET_GPIOA_MODER_BITS(i, GPO_MODE);
-
-    SET_GPIOC_MODER_BITS(LED1_PIN, GPO_MODE);
-    SET_GPIOC_MODER_BITS(LED2_PIN, GPO_MODE);
-    SET_GPIOC_MODER_BITS(BLUE_LED_PIN, GPO_MODE);
-
-    // Configure type register:
-    for (unsigned int i = DISPLAY_PIN_MIN; i <= DISPLAY_PIN_MAX; i ++)
-        SET_GPIOA_OTYPER_BITS(i, OTYPE_PUSH_PULL);
-
-    SET_GPIOC_OTYPER_BITS(LED1_PIN, OTYPE_PUSH_PULL);
-    SET_GPIOC_OTYPER_BITS(LED2_PIN, OTYPE_PUSH_PULL);
-    SET_GPIOC_OTYPER_BITS(BLUE_LED_PIN, OTYPE_PUSH_PULL);
-}
-
 //------
 // Main
 //------
@@ -280,21 +253,20 @@ int main()
 {
     board_clocking_init();
 
-    board_gpio_init();
+    // inicialization of the necessary pins
+    display_init();
 
-    struct Button button1 =
-    {
-        .pin = 0U
-    };
+    struct Button button1 = { .pin = 0U };
     button_init(&button1);
-    struct Button button2 =
-    {
-        .pin = 1U
-    };
+    struct Button button2 = { .pin = 1U };
     button_init(&button2);
 
+    led_init(LED1_PIN);
+    led_init(LED2_PIN);
+
     uint32_t tick = 0;
-    unsigned numb = 0U;
+    unsigned numb = 0;
+    bool wait = 0;
     while (1)
     {
         //-------------------
@@ -313,12 +285,22 @@ int main()
         //--------------
         // Manage logic
         //--------------
+        
+        // waiting
+        if (wait)
+        {
+            if (button1.is_pressed == 0 && button2.is_pressed == 0)
+                wait = 0;
+            SET_GPIOC_ODR_BIT(LED1_PIN);
+            SET_GPIOC_ODR_BIT(LED2_PIN);
+            continue;
+        }
 
         // show button press by leds
         if (button1.is_pressed)
-            SET_GPIOC_ODR_BIT(BLUE_LED_PIN);
+            SET_GPIOC_ODR_BIT(LED1_PIN);
         else
-            CLEAR_GPIOC_ODR_BIT(BLUE_LED_PIN);
+            CLEAR_GPIOC_ODR_BIT(LED1_PIN);
         if (button2.is_pressed)
             SET_GPIOC_ODR_BIT(LED2_PIN);
         else
@@ -327,14 +309,16 @@ int main()
         // win check
         if (button1.is_pressed && button2.is_pressed)
         {
-            if (button1.state_changed)
+            if (button1.state_changed && numb < 9900U)
+            {
                 numb += 100U;
-            if (button2.state_changed)
+                wait = 1;
+            }
+            if (button2.state_changed && numb % 100U < 99U)
+            {
                 numb += 1U;
+                wait = 1;
+            }
         }
-        // state changed reset
-        button1.state_changed = 0;
-        button2.state_changed = 0;
     }
-
 }
