@@ -13,15 +13,39 @@ RCC_CR      0x40021000      Clock Control Register
     PLLRDY  25 1 PLL clock ready flag
 
 RCC_CFGR    0x40021004      PLL Configuration Register
-    SW      0  2 System clock switch
-    SWS     2  2 System clock switch status
-    HPRE    4  4 HCLK prescaler
-    PPRE    8  2 PCLK prescaler
-    ADCPRE  14 1 ADC prescaler
-    PLLSRC  15 2 PLL input clock source
-    PLLXTPRE 17 1 HSE divider for PLL input clock
-    PLLMUL  18 4 PLL multiplication factor
-    MCO     24 4 Microcontroller clock output
+    SW      0  2    System clock switch
+        :00 HSI     HSI selected as system clock
+        :01 HSE     HSE selected as system clock
+        :10 PLL     PLL selected as system clock
+        :11 HSI48   HSI48 selected as system clock (when available)
+    SWS     2  2    System clock switch status
+        :00 HSI     HSI oscillator used as system clock
+        :01 HSE     HSE oscillator used as system clock
+        :10 PLL     PLL used as system clock
+        :11 HSI48   HSI48 oscillator used as system clock (when available)
+    HPRE    4  4        HCLK prescaler
+        :VAL+7U 2POW    SYSCLK divided by 2^VAL 0 <= VAL <= 9
+    PPRE    8  3 PCLK   prescaler
+        :VAL+3U 2POW    HCLK divided by 2^VAL 0 <= VAL <= 4
+    ADCPRE  14 1        ADC prescaler
+    PLLSRC  15 2        PLL input clock source
+        :00 HSI_2   HSI/2 selected as PLL input clock (PREDIV forced to divide by 2 on STM32F04x, STM32F07x and STM32F09x devices)
+        :01 HSI     HSI/PREDIV selected as PLL input clock
+        :10 HSE     HSE/PREDIV selected as PLL input clock
+        :11 HSI48   HSI48/PREDIV selected as PLL input clock
+    PLLXTPRE 17 1   HSE divider for PLL input clock
+    PLLMUL  18 4    PLL multiplication factor
+        :VAL-2U     COEF input clock xVAL 2 <= VAL <= 16
+    MCO     24 4        Microcontroller clock output
+        :0000 DISABLED  No clock on MCO
+        :0001 HSI14     Internal RC 14 MHz oscillator clock selected
+        :0010 LSI       Internal low speed oscillator clock selected
+        :0011 LSE       External low speed oscillator clock selected
+        :0100 SYSCLK    System clock selected
+        :0101 HSI       Internal RC 8 MHz oscillator clock selected
+        :0110 HSE       External 4-32 MHz oscillator clock selected
+        :0111 PLL       PLL clock selected (divided by 1 or 2, depending on PLLNODIV)
+        :1000 HSI48     Internal RC 48 MHz oscillator clock selected
 
 RCC_AHBENR  0x40021014      AHB1 Peripheral Clock Enable Register
     DMAEN   0  1 clock enable
@@ -38,20 +62,21 @@ RCC_AHBENR  0x40021014      AHB1 Peripheral Clock Enable Register
     TSCEN   24 1 Touch sensing controller clock enable
 
 RCC_CFGR2   0x4002102C      Clock configuration register 2
-    PREDIV  1  4 PREDIV division factor
+    PREDIV  1  4        PREDIV division factor
+        :VAL-1U COEF    PREDIV input clock divided by VAl 1 <= VAL <= 16
 
-GPIOA_MODER 0x48000000 2    GPIO port mode register
-GPIOA_OTYPER 0x48000004     GPIO port output type register
-GPIOA_PUPDR 0x4800000C 2    GPIO port pull-up/pull-down register
-GPIOA_IDR   0x48000010      GPIO port input  data register
-GPIOA_ODR   0x48000014      GPIO port output data register
-
-GPIOB_MODER 0x48000400 2    GPIO port mode register
-GPIOB_OTYPER 0x48004004     GPIO port output type register
-GPIOB_PUPDR 0x4800040C 2    GPIO port pull-up/pull-down register
-GPIOB_IDR   0x48000410      GPIO port input  data register
-GPIOB_ODR   0x48000414      GPIO port output data register
-
-GPIOC_MODER 0x48000800 2    GPIO port mode register
-GPIOC_OTYPER 0x48000804     GPIO port output type register
-GPIOC_ODR   0x48000814      GPIO port output data register
+GPIOx_MODER 0x48000000 2    GPIO port mode register
+    :00 INPUT_MODE          GPIO input mode
+    :01 GPO_MODE            General purppose output mode
+    :10 ALTERNATE_FUNC_MODE Alternate function mode
+    :11 ANALOG_MODE         GPIO analog mode
+GPIOx_OTYPER 0x48000004     GPIO port output type register
+    :0 PP   Output push-pull (reset state)
+    :1 OD   Output open-drain
+GPIOx_PUPDR 0x4800000C 2    GPIO port pull-up/pull-down register
+    :00 NO      No pull-up, pull-down
+    :01 PU      Pull-up
+    :10 PD      Pull-down
+    :11 REVERSE Reserved
+GPIOx_IDR   0x48000010      GPIO port input  data register
+GPIOx_ODR   0x48000014      GPIO port output data register

@@ -1,4 +1,5 @@
 #include <stdint.h>
+
 #include "STM32F051.h"
 
 //------
@@ -20,29 +21,29 @@ void board_clocking_init()
 {
     // (1) Clock HSE and wait for oscillations to setup.
     SET_RCC_CR_HSEON();
-    while (READ_RCC_CR_HSERDY() != 1U);
+    while (! READ_RCC_CR_HSERDY());
 
     // (2) Configure PLL:
     // PREDIV output: HSE/2 = 4 MHz
-    SET_RCC_CFGR2_PREDIV_(2U);
+    SET_RCC_CFGR2_PREDIV_COEF(2U);
 
     // (3) Select PREDIV output as PLL input (4 MHz):
     SET_RCC_CFGR_PLLSRC(0b10U);
 
     // (4) Set PLLMUL to 12:
     // SYSCLK frequency = 48 MHz
-    SET_RCC_CFGR_PLLMUL_(12U);
+    SET_RCC_CFGR_PLLMUL_COEF(12U);
 
     // (5) Enable PLL:
     SET_RCC_CR_PLLON();
-    while (READ_RCC_CR_PLLRDY() != 1U);
+    while (! READ_RCC_CR_PLLRDY());
 
     // (6) Configure AHB frequency to 48 MHz:
-    SET_RCC_CFGR_HPRE(0b000U);
+    SET_RCC_CFGR_HPRE_2POW(0U);
 
     // (7) Select PLL as SYSCLK source:
-    SET_RCC_CFGR_SW(0b10U);
-    while (READ_RCC_CFGR_SWS() != 0b10U);
+    SET_RCC_CFGR_SW_PLL();
+    while (READ_RCC_CFGR_SWS() != RCC_CFGR_SWS_PLL);
 
     // (8) Set APB frequency to 24 MHz
     SET_RCC_CFGR_PPRE(0b100U);
@@ -55,12 +56,12 @@ void board_gpio_init()
 
 
     // (2) Configure PC8 mode:
-    SET_GPIOC_MODER_BITS(BLUE_LED_PIN, GPO_MODE);
-    SET_GPIOC_MODER_BITS(GREEN_LED_PIN, GPO_MODE);
+    SET_GPIOC_MODER_GPO_MODE(BLUE_LED_PIN);
+    SET_GPIOC_MODER_GPO_MODE(GREEN_LED_PIN);
 
     // (3) Configure PC8 type:
-    CLEAR_GPIOC_OTYPER_BIT(BLUE_LED_PIN);
-    CLEAR_GPIOC_OTYPER_BIT(GREEN_LED_PIN);
+    SET_GPIOC_OTYPER_PP(BLUE_LED_PIN);
+    SET_GPIOC_OTYPER_PP(GREEN_LED_PIN);
 }
 
 void totally_accurate_quantum_femtosecond_precise_super_delay_3000_1000ms()

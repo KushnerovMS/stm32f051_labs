@@ -6,7 +6,6 @@
 // Help defines
 #define SET_RCC_CFGR2_PREDIV_(VAL) SET_RCC_CFGR2_PREDIV(VAL - 1U)
 #define SET_RCC_CFGR_PLLMUL_(VAL)  SET_RCC_CFGR_PLLMUL(VAL - 2U)
-#define REPEAT_FROMBIT_TOBIT(BEGIN, END, ...) for (uint16_t I = BEGIN; I <= END; I ++) __VA_ARGS__
 
 // Output types
 #define OTYPE_PUSH_PULL     0U
@@ -34,6 +33,8 @@
 //-------------------
 // 7-segment display
 //-------------------
+
+#define DISPLAY_GROUP 'A'
 
 // Pin mapping by nums
 #define E_NUM   1U
@@ -97,11 +98,11 @@ static const uint32_t POSITIONS[4] =
 
 void display_init()
 {
-    SET_RCC_AHBENR_IOPAEN();
+    SET_RCC_AHBENR_BIT((unsigned)(DISPLAY_GROUP - 'A'));
     for (unsigned int i = DISPLAY_PIN_MIN; i <= DISPLAY_PIN_MAX; i ++)
     {
-        SET_GPIOA_MODER_BITS(i, GPO_MODE);
-        SET_GPIOA_OTYPER_BITS(i, OTYPE_PUSH_PULL);
+        SET_GPIOx_MODER_GPO_MODE(DISPLAY_GROUP, i);
+        SET_GPIOx_OTYPER_PP(DISPLAY_GROUP, i);
     }
 }
 
@@ -113,7 +114,7 @@ void display_show_number(unsigned number, unsigned tick)
 
     uint32_t segment_pins_config = SEGMENT_PINS & ~DIGITS[(number / divisors[position]) % 10U];
 
-    RESET_BITS(REG_GPIOA_ODR, 0, PINS_USED, segment_pins_config | POSITIONS[position]);
+    RESET_BITS(REG_GPIOx_ODR(DISPLAY_GROUP), 0, PINS_USED, segment_pins_config | POSITIONS[position]);
 }
 
 //----------------------
@@ -122,6 +123,7 @@ void display_show_number(unsigned number, unsigned tick)
 
 struct Button
 {
+    char x;
     unsigned pin;
     unsigned saturation;
     bool is_pressed;
@@ -130,9 +132,9 @@ struct Button
 
 void button_init(struct Button* button)
 {
-    SET_RCC_AHBENR_IOPBEN();
-    SET_GPIOB_MODER_BITS(button -> pin, INPUT_MODE);
-    SET_GPIOB_PUPDR_BITS(button -> pin, PULL_DOWN);
+    SET_RCC_AHBENR_BIT((unsigned)(button -> x - 'A'));
+    SET_GPIOx_MODER_INPUT_MODE(button -> x, button -> pin);
+    SET_GPIOx_PUPDR_PD(button -> x, button -> pin);
 
     button -> saturation = 0;
     button -> is_pressed = 0;
@@ -142,7 +144,7 @@ void button_init(struct Button* button)
 void button_update(struct Button* button)
 {
     button -> state_changed = 0;
-    if (READ_GPIOB_IDR_BIT(button -> pin))   // button is pressed
+    if (READ_GPIOx_IDR_BIT(button -> x, button -> pin))   // button is pressed
     {
         if (button -> saturation < 10)
             button -> saturation ++;
@@ -173,11 +175,11 @@ void button_update(struct Button* button)
 #define LED1_PIN 0U // pin
 #define LED2_PIN 1U // pin
 
-void led_init(unsigned led_pin)
+void led_init(char x, unsigned led_pin)
 {
-    SET_RCC_AHBENR_IOPCEN();
-    SET_GPIOC_MODER_BITS(led_pin, GPO_MODE);
-    SET_GPIOC_OTYPER_BITS(led_pin, OTYPE_PUSH_PULL);
+    SET_RCC_AHBENR_BIT((unsigned)(x - 'A'));
+    SET_GPIOC_MODER_GPO_MODE(led_pin);
+    SET_GPIOC_OTYPER_PP(led_pin);
 }
 
 void led_blink(unsigned led, unsigned tick)
@@ -199,32 +201,32 @@ void board_clocking_init()
 {
     // (1) Clock HSE and wait for oscillations to setup.
     SET_RCC_CR_HSEON();
-    while (READ_RCC_CR_HSERDY() != 1U);
+    while (! READ_RCC_CR_HSERDY());
 
     // (2) Configure PLL:
     // PREDIV output: HSE/2 = 4 MHz
-    SET_RCC_CFGR2_PREDIV_(2U);
+    SET_RCC_CFGR2_PREDIV_COEF(2U);
 
     // (3) Select PREDIV output as PLL input (4 MHz):
-    SET_RCC_CFGR_PLLSRC(0b10U);
+    SET_RCC_CFGR_PLLSRC_HSE();
 
     // (4) Set PLLMUL to 12:
     // SYSCLK frequency = 48 MHz
-    SET_RCC_CFGR_PLLMUL_(12U);
+    SET_RCC_CFGR_PLLMUL_COEF(12U);
 
     // (5) Enable PLL:
     SET_RCC_CR_PLLON();
-    while (READ_RCC_CR_PLLRDY() != 1U);
+    while (! READ_RCC_CR_PLLRDY());
 
     // (6) Configure AHB frequency to 48 MHz:
-    SET_RCC_CFGR_HPRE(0b000U);
+    SET_RCC_CFGR_HPRE_2POW(0U);
 
     // (7) Select PLL as SYSCLK source:
-    SET_RCC_CFGR_SW(0b10U);
-    while (READ_RCC_CFGR_SWS() != 0b10U);
+    SET_RCC_CFGR_SW_PLL();
+    while (READ_RCC_CFGR_SWS() != RCC_CFGR_SWS_PLL);
 
     // (8) Set APB frequency to 24 MHz
-    SET_RCC_CFGR_PPRE(0b100U);
+    SET_RCC_CFGR_PPRE_2POW(1U);
 }
 
 void to_get_more_accuracy_pay_2202_2013_2410_3805_1ms_div8()
@@ -253,16 +255,17 @@ int main()
 {
     board_clocking_init();
 
+    
     // inicialization of the necessary pins
     display_init();
 
-    struct Button button1 = { .pin = 0U };
+    struct Button button1 = { .x = 'B', .pin = 0U };
     button_init(&button1);
-    struct Button button2 = { .pin = 1U };
+    struct Button button2 = { .x = 'B', .pin = 1U };
     button_init(&button2);
 
-    led_init(LED1_PIN);
-    led_init(LED2_PIN);
+    led_init('C', LED1_PIN);
+    led_init('C', LED2_PIN);
 
     uint32_t tick = 0;
     unsigned numb = 0;
